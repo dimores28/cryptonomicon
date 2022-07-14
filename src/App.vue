@@ -262,7 +262,6 @@ export default {
 
       const response = await f.json();
       context.coinsList = Object.values(response.Data);
-      // Object.entries();
     }, 0);
   }
 };
