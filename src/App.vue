@@ -1,5 +1,30 @@
 <template>
   <div class="container mx-auto flex flex-col items-center bg-gray-100 p-4">
+    <div
+      class="fixed w-100 h-100 opacity-80 bg-purple-800 inset-0 z-50 flex items-center justify-center"
+      v-if="!coinsList"
+    >
+      <svg
+        class="animate-spin -ml-1 mr-3 h-12 w-12 text-white"
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+      >
+        <circle
+          class="opacity-25"
+          cx="12"
+          cy="12"
+          r="10"
+          stroke="currentColor"
+          stroke-width="4"
+        ></circle>
+        <path
+          class="opacity-75"
+          fill="currentColor"
+          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+        ></path>
+      </svg>
+    </div>
     <div class="container">
       <div class="w-full my-4"></div>
       <section>
@@ -12,12 +37,29 @@
               <input
                 v-model="ticker"
                 @keydown.enter="add"
+                @input="myChange"
                 type="text"
                 name="wallet"
                 id="wallet"
                 class="block w-full pr-10 border-gray-300 text-gray-900 focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm rounded-md"
                 placeholder="Например DOGE"
               />
+            </div>
+            <div
+              v-if="autocomplete.length"
+              class="flex bg-white shadow-md p-1 rounded-md flex-wrap"
+            >
+              <span
+                class="inline-flex items-center px-2 m-1 rounded-md text-xs font-medium bg-gray-300 text-gray-800 cursor-pointer"
+                v-for="el in autocomplete"
+                :key="el.Symbol"
+                @click="addAutocomplete(el.Symbol)"
+              >
+                {{ el.Symbol }}
+              </span>
+            </div>
+            <div v-if="present" class="text-sm text-red-600">
+              Такой тикер уже добавлен
             </div>
           </div>
         </div>
@@ -133,22 +175,51 @@
 <script>
 export default {
   name: "App",
-
   data() {
     return {
       ticker: "",
       tickers: [],
       sel: null,
-      graph: []
+      graph: [],
+      coinsList: null,
+      present: false,
+      autocomplete: []
     };
   },
 
   methods: {
+    myChange() {
+      if (this.present) {
+        this.present = false;
+      }
+      if (this.ticker) {
+        this.autocomplete = this.coinsList.filter(it =>
+          it.Symbol.includes(this.ticker.toUpperCase())
+        );
+        this.autocomplete = this.autocomplete.slice(0, 4);
+      } else {
+        this.autocomplete = this.autocomplete.splice(0, 0);
+      }
+    },
+    addAutocomplete(name) {
+      this.ticker = name;
+      this.add();
+      this.autocomplete = this.autocomplete.splice(0, 0);
+    },
     add() {
       const currentTicker = {
         name: this.ticker,
         price: "-"
       };
+
+      if (
+        this.tickers.some(
+          it => it.name.toUpperCase() === currentTicker.name.toUpperCase()
+        )
+      ) {
+        this.present = true;
+        return;
+      }
 
       this.tickers.push(currentTicker);
       setInterval(async () => {
@@ -181,6 +252,17 @@ export default {
         price => 5 + ((price - minValue) * 95) / (maxValue - minValue)
       );
     }
+  },
+  mounted() {
+    const context = this;
+    setTimeout(async () => {
+      const f = await fetch(
+        `https://min-api.cryptocompare.com/data/all/coinlist?summary=true`
+      );
+
+      const response = await f.json();
+      context.coinsList = Object.values(response.Data);
+    }, 0);
   }
 };
 </script>
