@@ -186,7 +186,15 @@ export default {
       autocomplete: []
     };
   },
-
+  created() {
+    const tikersData = localStorage.getItem("cryptonomicon-list");
+    if (tikersData) {
+      this.tickers = JSON.parse(tikersData);
+      this.tickers.forEach(tiker => {
+        this.subscribeToUpdates(tiker.name);
+      });
+    }
+  },
   methods: {
     myChange() {
       if (this.present) {
@@ -206,6 +214,23 @@ export default {
       this.add();
       this.autocomplete = this.autocomplete.splice(0, 0);
     },
+    subscribeToUpdates(tickerName) {
+      setInterval(async () => {
+        const f = await fetch(
+          `https://min-api.cryptocompare.com/data/price?fsym=${tickerName}&tsyms=USD&api_key=5719dce4d6447b6e5a05773d07cf80682cc4f2baf452fe78b5b717e39bd619d0`
+        );
+
+        const data = await f.json();
+
+        this.tickers.find(t => t.name === tickerName).price =
+          data.USD > 1 ? data.USD.toFixed(2) : data.USD.toPrecision(2);
+
+        if (this.sel?.name === tickerName) {
+          this.graph.push(data.USD);
+        }
+      }, 3000);
+      this.ticker = "";
+    },
     add() {
       const currentTicker = {
         name: this.ticker,
@@ -222,21 +247,9 @@ export default {
       }
 
       this.tickers.push(currentTicker);
-      setInterval(async () => {
-        const f = await fetch(
-          `https://min-api.cryptocompare.com/data/price?fsym=${currentTicker.name}&tsyms=USD&api_key=5719dce4d6447b6e5a05773d07cf80682cc4f2baf452fe78b5b717e39bd619d0`
-        );
 
-        const data = await f.json();
-
-        this.tickers.find(t => t.name === currentTicker.name).price =
-          data.USD > 1 ? data.USD.toFixed(2) : data.USD.toPrecision(2);
-
-        if (this.sel?.name === currentTicker.name) {
-          this.graph.push(data.USD);
-        }
-      }, 3000);
-      this.ticker = "";
+      localStorage.setItem("cryptonomicon-list", JSON.stringify(this.tickers));
+      this.subscribeToUpdates(currentTicker.name);
     },
     select(ticker) {
       this.sel = ticker;
