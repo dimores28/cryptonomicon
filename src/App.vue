@@ -46,7 +46,7 @@
               />
             </div>
             <div
-              v-if="autocomplete.length"
+              v-if="ticker !== ''"
               class="flex bg-white shadow-md p-1 rounded-md flex-wrap"
             >
               <span
@@ -294,6 +294,9 @@ export default {
       this.tickers
         .filter(t => t.name === tickerName)
         .forEach(t => {
+          if (t === this.selectedTicker) {
+            this.graph.push(price);
+          }
           t.price = price;
         });
     },
@@ -338,7 +341,7 @@ export default {
 
     add() {
       const currentTicker = {
-        name: this.ticker,
+        name: this.ticker.toUpperCase(),
         price: "-"
       };
 
