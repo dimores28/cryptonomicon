@@ -6,11 +6,20 @@ const socket = new WebSocket(
 );
 
 const AGGREGATE_INDEX = "5";
+const INVALID_SUB = "500";
 
 socket.addEventListener("message", e => {
-  const { TYPE: type, FROMSYMBOL: currency, PRICE: newPrice } = JSON.parse(
-    e.data
-  );
+  const {
+    TYPE: type,
+    FROMSYMBOL: currency,
+    PRICE: newPrice,
+    PARAMETER: missingCurrency
+  } = JSON.parse(e.data);
+
+  if (type === INVALID_SUB) {
+    markTheWrongTicker(missingCurrency);
+  }
+
   if (type !== AGGREGATE_INDEX || newPrice === undefined) {
     return;
   }
@@ -52,6 +61,13 @@ function unsubscribeFromTickerOnWs(ticker) {
   });
 }
 
+function markTheWrongTicker(missingCurrency) {
+  let currency = missingCurrency.split("~")[2];
+  console.log(currency);
+
+  tickersHandlers.set(currency, "null");
+}
+
 export const subscribeToTicker = (ticker, cb) => {
   const subscribers = tickersHandlers.get(ticker) || [];
   tickersHandlers.set(ticker, [...subscribers, cb]);
@@ -64,3 +80,5 @@ export const unsubscribeFromTicker = ticker => {
 };
 
 window.tickers = tickersHandlers;
+
+//TYPE: "500", MESSAGE: "INVALID_SUB", PARAMETER: "5~CCCAGG~FOO~USD"
