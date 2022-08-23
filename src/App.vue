@@ -111,9 +111,11 @@
             :key="t.name"
             @click="select(t)"
             :class="{
-              'border-4': selectedTicker === t
+              'border-4': selectedTicker === t,
+              'bg-white': !t.wrong,
+              'bg-red-100': t.wrong
             }"
-            class="bg-white overflow-hidden shadow rounded-lg border-purple-800 border-solid cursor-pointer"
+            class="overflow-hidden shadow rounded-lg border-purple-800 border-solid cursor-pointer"
           >
             <div class="px-4 py-5 sm:p-6 text-center">
               <dt class="text-sm font-medium text-gray-500 truncate">
@@ -339,10 +341,19 @@ export default {
       // });
     },
 
+    wrongTicker(tickerName) {
+      this.tickers.forEach(ticker => {
+        if (ticker.name === tickerName) {
+          ticker.wrong = true;
+        }
+      });
+    },
+
     add() {
       const currentTicker = {
         name: this.ticker.toUpperCase(),
-        price: "-"
+        price: "-",
+        wrong: false
       };
 
       if (
@@ -357,8 +368,10 @@ export default {
       this.tickers = [...this.tickers, currentTicker];
       this.ticker = "";
       this.filter = "";
-      subscribeToTicker(currentTicker.name, newPrice =>
-        this.updateTicker(currentTicker.name, newPrice)
+      subscribeToTicker(
+        currentTicker.name,
+        newPrice => this.updateTicker(currentTicker.name, newPrice),
+        tickerName => this.wrongTicker(tickerName)
       );
     },
     select(ticker) {

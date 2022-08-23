@@ -17,15 +17,22 @@ socket.addEventListener("message", e => {
   } = JSON.parse(e.data);
 
   if (type === INVALID_SUB) {
-    markTheWrongTicker(missingCurrency);
+    const invalidCurrency = tickerUnboxing(missingCurrency);
+    const errorHaandlers = tickersHandlers.get(invalidCurrency) ?? {
+      done: [],
+      err: []
+    };
+
+    errorHaandlers.err.forEach(fn => fn(invalidCurrency));
+    return;
   }
 
   if (type !== AGGREGATE_INDEX || newPrice === undefined) {
     return;
   }
 
-  const handlers = tickersHandlers.get(currency) ?? [];
-  handlers.forEach(fn => fn(newPrice));
+  const handlers = tickersHandlers.get(currency) ?? { done: [], err: [] };
+  handlers.done.forEach(fn => fn(newPrice));
 });
 
 const tickersHandlers = new Map();
@@ -61,16 +68,16 @@ function unsubscribeFromTickerOnWs(ticker) {
   });
 }
 
-function markTheWrongTicker(missingCurrency) {
-  let currency = missingCurrency.split("~")[2];
-  console.log(currency);
-
-  tickersHandlers.set(currency, "null");
+function tickerUnboxing(missingCurrency) {
+  return missingCurrency.split("~")[2];
 }
 
-export const subscribeToTicker = (ticker, cb) => {
-  const subscribers = tickersHandlers.get(ticker) || [];
-  tickersHandlers.set(ticker, [...subscribers, cb]);
+export const subscribeToTicker = (ticker, cb, err) => {
+  const subscribers = tickersHandlers.get(ticker) || { done: [], err: [] };
+  tickersHandlers.set(ticker, {
+    done: [...subscribers.done, cb],
+    err: [...subscribers.err, err]
+  });
   subscribeToTickerOnWs(ticker);
 };
 
