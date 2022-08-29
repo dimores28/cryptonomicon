@@ -7,23 +7,44 @@ const socket = new WebSocket(
 
 const AGGREGATE_INDEX = "5";
 const INVALID_SUB = "500";
+const FAILED_TO_SUBSCRIBE = "INVALID_SUB";
+let btcPrice = 1;
+// const TRADING_PAIR_TO_BTC = "";
+// const TRADING_PAIR_TO_USD = "";
 
 socket.addEventListener("message", e => {
   const {
     TYPE: type,
     FROMSYMBOL: currency,
     PRICE: newPrice,
-    PARAMETER: missingCurrency
+    PARAMETER: missingCurrency,
+    TOSYMBOL: quotation,
+    MESSAGE: message
   } = JSON.parse(e.data);
 
-  if (type === INVALID_SUB) {
-    const invalidCurrency = tickerUnboxing(missingCurrency);
-    const errorHaandlers = tickersHandlers.get(invalidCurrency) ?? {
+  // if (btcPrice === 0) {
+  //   subscribeToTickerOnWs("BTC");
+  //   console.log("subscribe");
+  //   return;
+  // }
+
+  if (type === INVALID_SUB && message === FAILED_TO_SUBSCRIBE) {
+    const currencyPair = tickerUnboxing(missingCurrency);
+
+    if (currencyPair.quotation === "USD") {
+      subscribeToTickeTtoBtcOnWs(currencyPair.basic);
+      if (!tickersHandlers.has("BTC")) {
+        subscribeToTicker("BTC", () => {});
+      }
+      return;
+    }
+
+    const errorHaandlers = tickersHandlers.get(currencyPair.basic) ?? {
       done: [],
       err: []
     };
 
-    errorHaandlers.err.forEach(fn => fn(invalidCurrency));
+    errorHaandlers.err.forEach(fn => fn(currencyPair.basic));
     return;
   }
 
@@ -31,7 +52,17 @@ socket.addEventListener("message", e => {
     return;
   }
 
+  if (currency === "BTC") {
+    btcPrice = newPrice;
+  }
+
   const handlers = tickersHandlers.get(currency) ?? { done: [], err: [] };
+  if (quotation === "BTC") {
+    console.log(newPrice, btcPrice);
+    handlers.done.forEach(fn => fn(newPrice * btcPrice));
+    return;
+  }
+
   handlers.done.forEach(fn => fn(newPrice));
 });
 
@@ -61,15 +92,30 @@ function subscribeToTickerOnWs(ticker) {
   });
 }
 
-function unsubscribeFromTickerOnWs(ticker) {
+function subscribeToTickeTtoBtcOnWs(ticker) {
   sendToWebSocket({
-    action: "SubRemove",
-    subs: [`5~CCCAGG~${ticker}~USD`]
+    action: "SubAdd",
+    subs: [`5~CCCAGG~${ticker}~BTC`]
   });
 }
 
+function unsubscribeFromTickerOnWs(ticker) {
+  sendToWebSocket({
+    action: "SubRemove",
+    subs: [`5~CCCAGG~${ticker}~USD`, `5~CCCAGG~${ticker}~BTC`]
+  });
+}
+
+// function unsubscribeFromTickerToBtcOnWs(ticker) {
+//   sendToWebSocket({
+//     action: "SubRemove",
+//     subs: [`5~CCCAGG~${ticker}~BTC`]
+//   });
+// }
+
 function tickerUnboxing(missingCurrency) {
-  return missingCurrency.split("~")[2];
+  const pair = missingCurrency.split("~");
+  return { basic: pair[2], quotation: pair[3] };
 }
 
 export const subscribeToTicker = (ticker, cb, err) => {
@@ -87,5 +133,6 @@ export const unsubscribeFromTicker = ticker => {
 };
 
 window.tickers = tickersHandlers;
+window.priceBtc = btcPrice;
 
 //TYPE: "500", MESSAGE: "INVALID_SUB", PARAMETER: "5~CCCAGG~FOO~USD"

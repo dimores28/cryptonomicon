@@ -283,8 +283,10 @@ export default {
     if (tikersData) {
       this.tickers = JSON.parse(tikersData);
       this.tickers.forEach(ticker => {
-        subscribeToTicker(ticker.name, newPrice =>
-          this.updateTicker(ticker.name, newPrice)
+        subscribeToTicker(
+          ticker.name,
+          newPrice => this.updateTicker(ticker.name, newPrice),
+          tickerName => this.wrongTicker(tickerName)
         );
       });
     }
