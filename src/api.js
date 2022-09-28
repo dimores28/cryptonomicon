@@ -8,11 +8,23 @@ const socket = new WebSocket(
 const AGGREGATE_INDEX = "5";
 const INVALID_SUB = "500";
 const FAILED_TO_SUBSCRIBE = "INVALID_SUB";
-let btcPrice = 1;
-// const TRADING_PAIR_TO_BTC = "";
-// const TRADING_PAIR_TO_USD = "";
 
-socket.addEventListener("message", e => {
+const bc = new BroadcastChannel('test_channel');
+bc.onmessage = hendlerNewMessage
+
+function hendlerNewMessage(e) {
+  // console.log(e);
+
+  let mess;
+
+  if (typeof e === "string") {
+    mess = e;
+  }
+  else {
+    mess = e.data;
+  }
+
+
   const {
     TYPE: type,
     FROMSYMBOL: currency,
@@ -20,13 +32,7 @@ socket.addEventListener("message", e => {
     PARAMETER: missingCurrency,
     TOSYMBOL: quotation,
     MESSAGE: message
-  } = JSON.parse(e.data);
-
-  // if (btcPrice === 0) {
-  //   subscribeToTickerOnWs("BTC");
-  //   console.log("subscribe");
-  //   return;
-  // }
+  } = JSON.parse(mess);
 
   if (type === INVALID_SUB && message === FAILED_TO_SUBSCRIBE) {
     const currencyPair = tickerUnboxing(missingCurrency);
@@ -64,6 +70,20 @@ socket.addEventListener("message", e => {
   }
 
   handlers.done.forEach(fn => fn(newPrice));
+
+}
+
+function sendMessage(mess) {
+  bc.postMessage(mess);
+  hendlerNewMessage(mess);
+}
+
+let btcPrice = 1;
+// const TRADING_PAIR_TO_BTC = "";
+// const TRADING_PAIR_TO_USD = "";
+
+socket.addEventListener("message", e => {
+  sendMessage(e.data);
 });
 
 const tickersHandlers = new Map();
