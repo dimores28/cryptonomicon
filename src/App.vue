@@ -103,6 +103,30 @@
         @resize-graph="resizeGraph"
       />
     </div>
+    <modal-view :open="showModal" @close="closeModal">
+      <template #default>
+        <h2 class="mt-1 text-3xl font-semibold text-gray-900">Modal</h2>
+        <p class="mt-1 text-3xl font-semibold text-gray-400">
+          russian ship fuck!!!
+        </p>
+      </template>
+      <template #footer>
+        <input type="text" v-model="captcha" />
+        <button
+          :disabled="isSend"
+          class="my-4 mx-2 inline-flex items-center py-2 px-4 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-full text-white bg-gray-600"
+          @click="closeModal"
+        >
+          Ok
+        </button>
+      </template>
+    </modal-view>
+    <button
+      @click="openModal"
+      class="my-4 mx-2 inline-flex items-center py-2 px-4 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-full text-white bg-gray-600 hover:bg-gray-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+    >
+      open
+    </button>
   </div>
 </template>
 
@@ -126,11 +150,14 @@
 import { subscribeToTicker, unsubscribeFromTicker } from "./api";
 import AddTicker from "./components/AddTicker.vue";
 import GraphView from "./components/GraphView.vue";
+import ModalView from "./components/Modal.vue";
+
 export default {
   name: "App",
   components: {
     AddTicker,
-    GraphView
+    GraphView,
+    ModalView
   },
   data() {
     return {
@@ -142,10 +169,15 @@ export default {
       autocomplete: [],
       page: 1,
       filter: "",
-      maxGraphElements: 1
+      maxGraphElements: 1,
+      showModal: false,
+      captcha: ""
     };
   },
   computed: {
+    isSend() {
+      return this.captcha !== "iunderstand";
+    },
     startIndex() {
       return (this.page - 1) * 6;
     },
@@ -203,6 +235,13 @@ export default {
     setInterval(this.updateTickers, 5000);
   },
   methods: {
+    openModal() {
+      this.showModal = true;
+    },
+    closeModal() {
+      this.showModal = false;
+      this.captcha = "";
+    },
     resizeGraph(number) {
       this.maxGraphElements = number;
     },
